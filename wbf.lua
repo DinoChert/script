@@ -1,9 +1,10 @@
 -- Wooden Box Auto Farmer
--- Using Rayfield UI Library (like universal scripts)
+-- Using Fluent UI Library
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 
 local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
@@ -16,7 +17,6 @@ local Config = {
     BasePosition = Vector3.new(0, 50, 0),
     AutoReturnToBase = true,
     BoxesCollected = 0,
-    Notifications = true,
     FullBright = false,
     NoFog = false,
     WalkSpeed = 16,
@@ -24,7 +24,6 @@ local Config = {
     InfiniteJump = false
 }
 
-local Lighting = game:GetService("Lighting")
 local OriginalLighting = {
     Brightness = Lighting.Brightness,
     Ambient = Lighting.Ambient,
@@ -33,150 +32,128 @@ local OriginalLighting = {
     FogStart = Lighting.FogStart
 }
 
--- Загрузка Rayfield UI Library
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Загрузка Fluent UI Library
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 -- Создание окна
-local Window = Rayfield:CreateWindow({
-    Name = "🪵 Wooden Box Farmer",
-    LoadingTitle = "Wooden Box Farmer",
-    LoadingSubtitle = "by Script Developer",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "WoodenBoxFarmer",
-        FileName = "Config"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "noinvitelink",
-        RememberJoins = true
-    },
-    KeySystem = false
+local Window = Fluent:CreateWindow({
+    Title = "Wooden Box Farmer",
+    SubTitle = "by DinoChert",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- Вкладка "Главная"
-local HomeTab = Window:CreateTab("🏠 Главная", 4483362458)
+-- Создание вкладок
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Farm = Window:AddTab({ Title = "Farm", Icon = "box" }),
+    Teleport = Window:AddTab({ Title = "Teleport", Icon = "map-pin" }),
+    Player = Window:AddTab({ Title = "Player", Icon = "user" }),
+    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    Stats = Window:AddTab({ Title = "Stats", Icon = "bar-chart" })
+}
 
-local HomeSection = HomeTab:CreateSection("Добро пожаловать!")
-
-HomeTab:CreateParagraph({
-    Title = "📌 Инструкция",
-    Content = "1. Перейди в 'Телепорт' и установи базу\n2. Настрой параметры во вкладке 'Фарм'\n3. Включи автофарм и наслаждайся!"
+-- Вкладка Main
+Tabs.Main:AddParagraph({
+    Title = "Welcome!",
+    Content = "Wooden Box Farmer - автоматический сбор боксов с телепортацией на базу."
 })
 
-HomeTab:CreateButton({
-    Name = "🚀 Быстрый старт",
+Tabs.Main:AddButton({
+    Title = "Quick Start",
+    Description = "Установить базу и запустить фарм",
     Callback = function()
         if Character and Character:FindFirstChild("HumanoidRootPart") then
             Config.BasePosition = Character.HumanoidRootPart.Position
             Config.Enabled = true
             spawn(FarmLoop)
-            Rayfield:Notify({
-                Title = "Быстрый старт",
+            Fluent:Notify({
+                Title = "Quick Start",
                 Content = "Автофарм запущен!",
-                Duration = 3,
-                Image = 4483362458
+                Duration = 3
             })
         end
     end
 })
 
--- Вкладка "Фарм"
-local FarmTab = Window:CreateTab("⚙️ Фарм", 4483362458)
-
-local FarmSection = FarmTab:CreateSection("Настройки автофарма")
-
-local FarmToggle = FarmTab:CreateToggle({
-    Name = "🟢 Включить автофарм",
-    CurrentValue = false,
-    Flag = "FarmToggle",
+-- Вкладка Farm
+local FarmToggle = Tabs.Farm:AddToggle("FarmToggle", {
+    Title = "Enable Auto Farm",
+    Default = false,
     Callback = function(Value)
         Config.Enabled = Value
         if Value then
             spawn(FarmLoop)
-            Rayfield:Notify({
-                Title = "Автофарм",
+            Fluent:Notify({
+                Title = "Auto Farm",
                 Content = "Запущен",
-                Duration = 2,
-                Image = 4483362458
+                Duration = 2
             })
         else
-            Rayfield:Notify({
-                Title = "Автофарм",
+            Fluent:Notify({
+                Title = "Auto Farm",
                 Content = "Остановлен",
-                Duration = 2,
-                Image = 4483362458
+                Duration = 2
             })
         end
     end
 })
 
-local AutoReturnToggle = FarmTab:CreateToggle({
-    Name = "🏠 Авто возврат на базу",
-    CurrentValue = true,
-    Flag = "AutoReturnToggle",
+Tabs.Farm:AddToggle("AutoReturn", {
+    Title = "Auto Return to Base",
+    Default = true,
     Callback = function(Value)
         Config.AutoReturnToBase = Value
     end
 })
 
-local NotificationsToggle = FarmTab:CreateToggle({
-    Name = "🔔 Уведомления",
-    CurrentValue = true,
-    Flag = "NotificationsToggle",
-    Callback = function(Value)
-        Config.Notifications = Value
-    end
-})
-
-local SpeedSlider = FarmTab:CreateSlider({
-    Name = "⏱️ Скорость сбора (сек)",
-    Range = {0.1, 2},
-    Increment = 0.1,
-    CurrentValue = 0.5,
-    Flag = "SpeedSlider",
+Tabs.Farm:AddSlider("FarmSpeed", {
+    Title = "Farm Speed",
+    Description = "Задержка между сбором (секунды)",
+    Default = 0.5,
+    Min = 0.1,
+    Max = 2,
+    Rounding = 1,
     Callback = function(Value)
         Config.FarmSpeed = Value
     end
 })
 
--- Вкладка "Телепорт"
-local TeleportTab = Window:CreateTab("📍 Телепорт", 4483362458)
-
-local TeleportSection = TeleportTab:CreateSection("Управление базой")
-
-TeleportTab:CreateButton({
-    Name = "📍 Установить базу (текущая позиция)",
+-- Вкладка Teleport
+Tabs.Teleport:AddButton({
+    Title = "Set Base (Current Position)",
+    Description = "Установить текущую позицию как базу",
     Callback = function()
         if Character and Character:FindFirstChild("HumanoidRootPart") then
             Config.BasePosition = Character.HumanoidRootPart.Position
-            Rayfield:Notify({
-                Title = "База",
+            Fluent:Notify({
+                Title = "Base",
                 Content = "Установлена на текущей позиции",
-                Duration = 3,
-                Image = 4483362458
+                Duration = 3
             })
         end
     end
 })
 
-TeleportTab:CreateButton({
-    Name = "🏠 Телепорт на базу",
+Tabs.Teleport:AddButton({
+    Title = "Teleport to Base",
+    Description = "Телепортироваться на базу",
     Callback = function()
         TeleportTo(Config.BasePosition)
-        Rayfield:Notify({
-            Title = "Телепорт",
+        Fluent:Notify({
+            Title = "Teleport",
             Content = "Перемещение на базу",
-            Duration = 2,
-            Image = 4483362458
+            Duration = 2
         })
     end
 })
 
-local QuickTeleportSection = TeleportTab:CreateSection("Быстрые телепорты")
-
-TeleportTab:CreateButton({
-    Name = "🌲 Телепорт к ближайшему боксу",
+Tabs.Teleport:AddButton({
+    Title = "Teleport to Nearest Box",
+    Description = "Телепорт к ближайшему боксу",
     Callback = function()
         local boxes = FindWoodenBoxes()
         if #boxes > 0 then
@@ -194,32 +171,82 @@ TeleportTab:CreateButton({
             end
             
             TeleportTo(closest.Position + Vector3.new(0, 3, 0))
-            Rayfield:Notify({
-                Title = "Телепорт",
+            Fluent:Notify({
+                Title = "Teleport",
                 Content = "К ближайшему боксу",
-                Duration = 2,
-                Image = 4483362458
+                Duration = 2
             })
         else
-            Rayfield:Notify({
-                Title = "Ошибка",
+            Fluent:Notify({
+                Title = "Error",
                 Content = "Боксы не найдены",
-                Duration = 3,
-                Image = 4483362458
+                Duration = 3
             })
         end
     end
 })
 
--- Вкладка "Визуал"
-local VisualTab = Window:CreateTab("👁️ Визуал", 4483362458)
+-- Вкладка Player
+Tabs.Player:AddSlider("WalkSpeed", {
+    Title = "Walk Speed",
+    Description = "Скорость ходьбы",
+    Default = 16,
+    Min = 16,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(Value)
+        Config.WalkSpeed = Value
+        if Character and Character:FindFirstChild("Humanoid") then
+            Character.Humanoid.WalkSpeed = Value
+        end
+    end
+})
 
-local VisualSection = VisualTab:CreateSection("Настройки визуала")
+Tabs.Player:AddSlider("JumpPower", {
+    Title = "Jump Power",
+    Description = "Сила прыжка",
+    Default = 50,
+    Min = 50,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(Value)
+        Config.JumpPower = Value
+        if Character and Character:FindFirstChild("Humanoid") then
+            Character.Humanoid.JumpPower = Value
+        end
+    end
+})
 
-VisualTab:CreateToggle({
-    Name = "💡 Full Bright",
-    CurrentValue = false,
-    Flag = "FullBrightToggle",
+Tabs.Player:AddToggle("InfiniteJump", {
+    Title = "Infinite Jump",
+    Default = false,
+    Callback = function(Value)
+        Config.InfiniteJump = Value
+    end
+})
+
+Tabs.Player:AddButton({
+    Title = "Reset Player Settings",
+    Description = "Сбросить настройки персонажа",
+    Callback = function()
+        Config.WalkSpeed = 16
+        Config.JumpPower = 50
+        if Character and Character:FindFirstChild("Humanoid") then
+            Character.Humanoid.WalkSpeed = 16
+            Character.Humanoid.JumpPower = 50
+        end
+        Fluent:Notify({
+            Title = "Player",
+            Content = "Настройки сброшены",
+            Duration = 2
+        })
+    end
+})
+
+-- Вкладка Visuals
+Tabs.Visuals:AddToggle("FullBright", {
+    Title = "Full Bright",
+    Default = false,
     Callback = function(Value)
         Config.FullBright = Value
         if Value then
@@ -234,10 +261,9 @@ VisualTab:CreateToggle({
     end
 })
 
-VisualTab:CreateToggle({
-    Name = "🌫️ No Fog",
-    CurrentValue = false,
-    Flag = "NoFogToggle",
+Tabs.Visuals:AddToggle("NoFog", {
+    Title = "No Fog",
+    Default = false,
     Callback = function(Value)
         Config.NoFog = Value
         if Value then
@@ -250,85 +276,36 @@ VisualTab:CreateToggle({
     end
 })
 
--- Вкладка "Игрок"
-local PlayerTab = Window:CreateTab("🏃 Игрок", 4483362458)
-
-local PlayerSection = PlayerTab:CreateSection("Настройки персонажа")
-
-PlayerTab:CreateSlider({
-    Name = "🏃 Скорость ходьбы",
-    Range = {16, 200},
-    Increment = 1,
-    CurrentValue = 16,
-    Flag = "WalkSpeedSlider",
-    Callback = function(Value)
-        Config.WalkSpeed = Value
-        if Character and Character:FindFirstChild("Humanoid") then
-            Character.Humanoid.WalkSpeed = Value
-        end
-    end
+-- Вкладка Stats
+local CollectedLabel = Tabs.Stats:AddParagraph({
+    Title = "Boxes Collected",
+    Content = "0"
 })
 
-PlayerTab:CreateSlider({
-    Name = "🦘 Сила прыжка",
-    Range = {50, 200},
-    Increment = 1,
-    CurrentValue = 50,
-    Flag = "JumpPowerSlider",
-    Callback = function(Value)
-        Config.JumpPower = Value
-        if Character and Character:FindFirstChild("Humanoid") then
-            Character.Humanoid.JumpPower = Value
-        end
-    end
+local StatusLabel = Tabs.Stats:AddParagraph({
+    Title = "Status",
+    Content = "Waiting"
 })
 
-PlayerTab:CreateToggle({
-    Name = "♾️ Бесконечный прыжок",
-    CurrentValue = false,
-    Flag = "InfiniteJumpToggle",
-    Callback = function(Value)
-        Config.InfiniteJump = Value
-    end
+local BaseLabel = Tabs.Stats:AddParagraph({
+    Title = "Base Position",
+    Content = "Not set"
 })
 
-PlayerTab:CreateButton({
-    Name = "🔄 Сбросить настройки персонажа",
-    Callback = function()
-        Config.WalkSpeed = 16
-        Config.JumpPower = 50
-        if Character and Character:FindFirstChild("Humanoid") then
-            Character.Humanoid.WalkSpeed = 16
-            Character.Humanoid.JumpPower = 50
-        end
-        Rayfield:Notify({
-            Title = "Персонаж",
-            Content = "Настройки сброшены",
-            Duration = 2,
-            Image = 4483362458
-        })
-    end
+local BoxesLabel = Tabs.Stats:AddParagraph({
+    Title = "Boxes in World",
+    Content = "0"
 })
 
--- Вкладка "Статистика"
-local StatsTab = Window:CreateTab("📊 Статистика", 4483362458)
-
-local StatsSection = StatsTab:CreateSection("Текущая статистика")
-
-local CollectedLabel = StatsTab:CreateLabel("📦 Собрано боксов: 0")
-local StatusLabel = StatsTab:CreateLabel("📊 Статус: Ожидание")
-local BaseLabel = StatsTab:CreateLabel("📍 База: Не установлена")
-local BoxesLabel = StatsTab:CreateLabel("🌲 Боксов в мире: 0")
-
-StatsTab:CreateButton({
-    Name = "🔄 Сбросить статистику",
+Tabs.Stats:AddButton({
+    Title = "Reset Statistics",
+    Description = "Сбросить статистику",
     Callback = function()
         Config.BoxesCollected = 0
-        Rayfield:Notify({
-            Title = "Статистика",
+        Fluent:Notify({
+            Title = "Stats",
             Content = "Сброшена",
-            Duration = 2,
-            Image = 4483362458
+            Duration = 2
         })
     end
 })
@@ -415,11 +392,11 @@ spawn(function()
     while wait(1) do
         local boxes = FindWoodenBoxes()
         
-        CollectedLabel:Set("📦 Собрано боксов: " .. Config.BoxesCollected)
-        StatusLabel:Set("📊 Статус: " .. (Config.Enabled and "🟢 Активен" or "🔴 Остановлен"))
-        BaseLabel:Set(string.format("📍 База: %.0f, %.0f, %.0f", 
+        CollectedLabel:SetDesc(tostring(Config.BoxesCollected))
+        StatusLabel:SetDesc(Config.Enabled and "Active" or "Stopped")
+        BaseLabel:SetDesc(string.format("%.0f, %.0f, %.0f", 
             Config.BasePosition.X, Config.BasePosition.Y, Config.BasePosition.Z))
-        BoxesLabel:Set("🌲 Боксов в мире: " .. #boxes)
+        BoxesLabel:SetDesc(tostring(#boxes))
     end
 end)
 
@@ -435,9 +412,8 @@ Player.CharacterAdded:Connect(function(char)
     Character = char
     HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
     Config.Enabled = false
-    FarmToggle:Set(false)
+    FarmToggle:SetValue(false)
     
-    -- Применяем настройки к новому персонажу
     wait(1)
     if Character:FindFirstChild("Humanoid") then
         Character.Humanoid.WalkSpeed = Config.WalkSpeed
@@ -446,16 +422,15 @@ Player.CharacterAdded:Connect(function(char)
 end)
 
 -- Уведомление о загрузке
-Rayfield:Notify({
+Fluent:Notify({
     Title = "Wooden Box Farmer",
     Content = "Успешно загружен!",
-    Duration = 5,
-    Image = 4483362458
+    Duration = 5
 })
 
 print("=================================")
 print("  Wooden Box Farmer v2.0")
-print("  Rayfield UI Edition")
+print("  Fluent UI Edition")
 print("=================================")
 print("✅ UI загружен")
 print("📌 Установите базу перед началом")
