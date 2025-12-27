@@ -16,7 +16,21 @@ local Config = {
     BasePosition = Vector3.new(0, 50, 0),
     AutoReturnToBase = true,
     BoxesCollected = 0,
-    Notifications = true
+    Notifications = true,
+    FullBright = false,
+    NoFog = false,
+    WalkSpeed = 16,
+    JumpPower = 50,
+    InfiniteJump = false
+}
+
+local Lighting = game:GetService("Lighting")
+local OriginalLighting = {
+    Brightness = Lighting.Brightness,
+    Ambient = Lighting.Ambient,
+    OutdoorAmbient = Lighting.OutdoorAmbient,
+    FogEnd = Lighting.FogEnd,
+    FogStart = Lighting.FogStart
 }
 
 -- Загрузка Rayfield UI Library
@@ -197,6 +211,105 @@ TeleportTab:CreateButton({
     end
 })
 
+-- Вкладка "Визуал"
+local VisualTab = Window:CreateTab("👁️ Визуал", 4483362458)
+
+local VisualSection = VisualTab:CreateSection("Настройки визуала")
+
+VisualTab:CreateToggle({
+    Name = "💡 Full Bright",
+    CurrentValue = false,
+    Flag = "FullBrightToggle",
+    Callback = function(Value)
+        Config.FullBright = Value
+        if Value then
+            Lighting.Brightness = 2
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        else
+            Lighting.Brightness = OriginalLighting.Brightness
+            Lighting.Ambient = OriginalLighting.Ambient
+            Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
+        end
+    end
+})
+
+VisualTab:CreateToggle({
+    Name = "🌫️ No Fog",
+    CurrentValue = false,
+    Flag = "NoFogToggle",
+    Callback = function(Value)
+        Config.NoFog = Value
+        if Value then
+            Lighting.FogEnd = 100000
+            Lighting.FogStart = 0
+        else
+            Lighting.FogEnd = OriginalLighting.FogEnd
+            Lighting.FogStart = OriginalLighting.FogStart
+        end
+    end
+})
+
+-- Вкладка "Игрок"
+local PlayerTab = Window:CreateTab("🏃 Игрок", 4483362458)
+
+local PlayerSection = PlayerTab:CreateSection("Настройки персонажа")
+
+PlayerTab:CreateSlider({
+    Name = "🏃 Скорость ходьбы",
+    Range = {16, 200},
+    Increment = 1,
+    CurrentValue = 16,
+    Flag = "WalkSpeedSlider",
+    Callback = function(Value)
+        Config.WalkSpeed = Value
+        if Character and Character:FindFirstChild("Humanoid") then
+            Character.Humanoid.WalkSpeed = Value
+        end
+    end
+})
+
+PlayerTab:CreateSlider({
+    Name = "🦘 Сила прыжка",
+    Range = {50, 200},
+    Increment = 1,
+    CurrentValue = 50,
+    Flag = "JumpPowerSlider",
+    Callback = function(Value)
+        Config.JumpPower = Value
+        if Character and Character:FindFirstChild("Humanoid") then
+            Character.Humanoid.JumpPower = Value
+        end
+    end
+})
+
+PlayerTab:CreateToggle({
+    Name = "♾️ Бесконечный прыжок",
+    CurrentValue = false,
+    Flag = "InfiniteJumpToggle",
+    Callback = function(Value)
+        Config.InfiniteJump = Value
+    end
+})
+
+PlayerTab:CreateButton({
+    Name = "🔄 Сбросить настройки персонажа",
+    Callback = function()
+        Config.WalkSpeed = 16
+        Config.JumpPower = 50
+        if Character and Character:FindFirstChild("Humanoid") then
+            Character.Humanoid.WalkSpeed = 16
+            Character.Humanoid.JumpPower = 50
+        end
+        Rayfield:Notify({
+            Title = "Персонаж",
+            Content = "Настройки сброшены",
+            Duration = 2,
+            Image = 4483362458
+        })
+    end
+})
+
 -- Вкладка "Статистика"
 local StatsTab = Window:CreateTab("📊 Статистика", 4483362458)
 
@@ -310,12 +423,26 @@ spawn(function()
     end
 end)
 
+-- Бесконечный прыжок
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if Config.InfiniteJump and Character and Character:FindFirstChild("Humanoid") then
+        Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
 -- Обновление персонажа при респавне
 Player.CharacterAdded:Connect(function(char)
     Character = char
     HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
     Config.Enabled = false
     FarmToggle:Set(false)
+    
+    -- Применяем настройки к новому персонажу
+    wait(1)
+    if Character:FindFirstChild("Humanoid") then
+        Character.Humanoid.WalkSpeed = Config.WalkSpeed
+        Character.Humanoid.JumpPower = Config.JumpPower
+    end
 end)
 
 -- Уведомление о загрузке
