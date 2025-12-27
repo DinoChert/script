@@ -2,6 +2,8 @@
 
 Автоматический фарм Wooden Box для Roblox с современным UI
 
+для игры Survival on a Raft
+
 ## 📥 Установка
 
 ```lua
